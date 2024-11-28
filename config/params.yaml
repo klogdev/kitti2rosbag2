@@ -1,8 +1,8 @@
 kitti_rec:
   ros__parameters:
     sequence: 2
-    data_dir: '/home/parallels/Documents/kitti_dataset/dataset'
-    odom_dir: '/home/parallels/Documents/kitti_dataset/dataset_2'
-    bag_dir : '/home/parallels/Documents/kitti_dataset/my_bag'
+    data_dir: '/home/ubuntu/datahouse/kitti_odometry/dataset'
+    odom_dir: '/home/ubuntu/datahouse/kitti_odometry/dataset'
+    bag_dir : '/home/ubuntu/datahouse/kitti_odometry/bags02'
     odom : True
   
