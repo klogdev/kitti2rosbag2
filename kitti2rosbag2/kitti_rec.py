@@ -18,6 +18,9 @@ from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge
 from rclpy.serialization import serialize_message
 
+# colcon build --packages-select kitti2rosbag2 --symlink-install
+# ros2 launch kitti2rosbag2 kitti2rosbag2.launch.py
+
 class Kitti_Odom(Node):
     def __init__(self):
         super().__init__("kitti_rec")
@@ -104,8 +107,10 @@ class Kitti_Odom(Node):
         left_image = cv2.imread(self.left_imgs[self.counter])
         right_image = cv2.imread(self.right_imgs[self.counter])
         left_img_msg = self.bridge.cv2_to_imgmsg(left_image, encoding='passthrough')
+        left_img_msg.header.stamp = self.ns_to_time(timestamp_ns)
         self.writer.write('/camera2/left/image_raw', serialize_message(left_img_msg), timestamp_ns)
         right_img_msg = self.bridge.cv2_to_imgmsg(right_image, encoding='passthrough')
+        right_img_msg.header.stamp = self.ns_to_time(timestamp_ns)
         self.writer.write('/camera3/right/image_raw', serialize_message(right_img_msg), timestamp_ns)
 
         # retrieving project mtx and writing to bag
