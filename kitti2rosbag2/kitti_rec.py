@@ -141,9 +141,10 @@ class Kitti_Odom(Node):
         self.writer.write(topic, serialize_message(camera_info_msg_2), timestamp)   
         return
     
-    def rec_odom_msg(self, translation, quaternion, timestamp):
+    def rec_odom_msg(self, translation, quaternion, timestamp_ns):
         odom_msg = Odometry()
         odom_msg.header.frame_id = "map"
+        odom_msg.header.stamp = self.ns_to_time(timestamp_ns)
         odom_msg.child_frame_id = "odom"
         odom_msg.pose.pose.position.z = -translation[1]
         odom_msg.pose.pose.position.y = -translation[2] 
@@ -152,8 +153,8 @@ class Kitti_Odom(Node):
         odom_msg.pose.pose.orientation.y = quaternion[1]
         odom_msg.pose.pose.orientation.z = quaternion[2]
         odom_msg.pose.pose.orientation.w = quaternion[3]
-        self.writer.write('/car/base/odom', serialize_message(odom_msg), timestamp)
-        self.rec_path_msg(odom_msg, timestamp)
+        self.writer.write('/car/base/odom', serialize_message(odom_msg), timestamp_ns)
+        self.rec_path_msg(odom_msg, timestamp_ns)
         return
 
     def rec_odom_msg2(self, translation, quaternion, timestamp_ns):
@@ -162,7 +163,6 @@ class Kitti_Odom(Node):
 
         translation_stamped.header.frame_id = "map"
         translation_stamped.header.stamp  = self.ns_to_time(timestamp_ns)
-        # self.get_logger().info(f'head-time secs {translation_stamped.header.stamp.sec} nsec {translation_stamped.header.stamp.nanosec}')
         translation_stamped.vector.z = -translation[1]
         translation_stamped.vector.y = -translation[2] 
         translation_stamped.vector.x = -translation[0]
@@ -177,13 +177,13 @@ class Kitti_Odom(Node):
         self.writer.write('/pose/base/rotation_stamped', serialize_message(rotation_stamped), timestamp_ns)
         return
     
-    def rec_path_msg(self, odom_msg, timestamp):
+    def rec_path_msg(self, odom_msg, timestamp_ns):
         pose= PoseStamped()
         pose.pose = odom_msg.pose.pose
         pose.header.frame_id = "odom"
         self.p_msg.poses.append(pose)
         self.p_msg.header.frame_id = "map"
-        self.writer.write('/car/base/odom_path', serialize_message(self.p_msg), timestamp)
+        self.writer.write('/car/base/odom_path', serialize_message(self.p_msg), timestamp_ns)
         return
 
     @staticmethod
