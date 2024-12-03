@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 import rosbag2_py
 import os
+import base64
 from rclpy.node import Node
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import QuaternionStamped, Vector3Stamped
@@ -104,13 +105,9 @@ class Kitti_Odom(Node):
         timestamp_ns = int(time * 1e9) # nanoseconds
 
         # retrieving images and writing to bag
-        left_image = cv2.imread(self.left_imgs[self.counter])
-        right_image = cv2.imread(self.right_imgs[self.counter])
-        left_img_msg = self.bridge.cv2_to_imgmsg(left_image, encoding='passthrough')
-        left_img_msg.header.stamp = self.ns_to_time(timestamp_ns)
+        left_img_msg = Kitti_Odom.encode_image_to_base64(self.left_imgs[self.counter], timestamp_ns)
         self.writer.write('/camera2/left/image_raw', serialize_message(left_img_msg), timestamp_ns)
-        right_img_msg = self.bridge.cv2_to_imgmsg(right_image, encoding='passthrough')
-        right_img_msg.header.stamp = self.ns_to_time(timestamp_ns)
+        right_img_msg = Kitti_Odom.encode_image_to_base64(self.right_imgs[self.counter], timestamp_ns)
         self.writer.write('/camera3/right/image_raw', serialize_message(right_img_msg), timestamp_ns)
 
         # retrieving project mtx and writing to bag
@@ -144,7 +141,7 @@ class Kitti_Odom(Node):
     def rec_odom_msg(self, translation, quaternion, timestamp_ns):
         odom_msg = Odometry()
         odom_msg.header.frame_id = "map"
-        odom_msg.header.stamp = self.ns_to_time(timestamp_ns)
+        odom_msg.header.stamp = Kitti_Odom.ns_to_time(timestamp_ns)
         odom_msg.child_frame_id = "odom"
         odom_msg.pose.pose.position.z = -translation[1]
         odom_msg.pose.pose.position.y = -translation[2] 
@@ -162,14 +159,14 @@ class Kitti_Odom(Node):
         translation_stamped = Vector3Stamped()
 
         translation_stamped.header.frame_id = "map"
-        translation_stamped.header.stamp  = self.ns_to_time(timestamp_ns)
+        translation_stamped.header.stamp  = Kitti_Odom.ns_to_time(timestamp_ns)
         translation_stamped.vector.z = -translation[1]
         translation_stamped.vector.y = -translation[2] 
         translation_stamped.vector.x = -translation[0]
         self.writer.write('/pose/base/translation_stamped', serialize_message(translation_stamped), timestamp_ns)
 
         rotation_stamped.header.frame_id = "map"
-        rotation_stamped.header.stamp  = self.ns_to_time(timestamp_ns)
+        rotation_stamped.header.stamp  = Kitti_Odom.ns_to_time(timestamp_ns)
         rotation_stamped.quaternion.x = quaternion[0]
         rotation_stamped.quaternion.y = quaternion[1]
         rotation_stamped.quaternion.z = quaternion[2]
@@ -185,6 +182,27 @@ class Kitti_Odom(Node):
         self.p_msg.header.frame_id = "map"
         self.writer.write('/car/base/odom_path', serialize_message(self.p_msg), timestamp_ns)
         return
+
+    @staticmethod
+    def encode_image_to_base64(image_path, timestamp_ns):
+        """Read and encode an image as Base64."""
+        image = cv2.imread(image_path)
+        success, encoded_image = cv2.imencode('.jpg', image)
+        if not success:
+            raise ValueError("Failed to encode image")
+        byte_data = encoded_image.tobytes()
+
+        img_msg = Image()
+        img_msg.header.stamp = Kitti_Odom.ns_to_time(timestamp_ns)
+        img_msg.header.frame_id = "camera"
+        img_msg.width = image.shape[1] 
+        img_msg.height = image.shape[0] 
+        img_msg.encoding = "jpeg"
+        img_msg.step = image.shape[1] * image.shape[2]
+        img_msg.is_bigendian = 0
+        img_msg.data = byte_data
+
+        return img_msg
 
     @staticmethod
     def ns_to_time(timestamp_ns):
